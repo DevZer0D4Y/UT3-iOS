@@ -1,0 +1,20 @@
+# Functions the analyzer does not find on its own.
+[functions]
+# Reached only by tail branches ("b"), never by "bl", so the scan misses them.
+"0x827E16F0" = {}  # from 0x828F1A48
+"0x82704670" = {}  # from 0x82707574
+
+# sub_82234668 stores two fields and jumps over sub_82234678 to its body at
+# 0x822346F0. Declaring that body a chunk of it puts its internal branches in
+# the function, instead of REX_FATAL "unknown address" stubs.
+"0x822346F0" = { parent = 0x82234668, end = 0x82234764 }
+
+# catch(...) funclets that end in a rethrow (bl _CxxThrowException with no
+# object, 0x828E36A0), which never returns. The analyzer falls through it, over
+# the next funclet's two EH header words and into that funclet's body, then
+# branches to labels only that funclet has. Their .pdata lengths, pinned:
+"0x8277AB30" = { size = 0x94 }
+"0x82789C04" = { size = 0x94 }
+"0x82795944" = { size = 0x94 }
+"0x827969AC" = { size = 0x94 }
+"0x8279AE10" = { size = 0x94 }

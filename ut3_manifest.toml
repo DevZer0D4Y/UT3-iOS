@@ -1,0 +1,33 @@
+# Unreal Tournament 3 (Xbox 360, 2008) - static recompilation for iOS on the
+# iOS port of the ReXGlue SDK.
+
+[project]
+name = "ut3"
+sdk_version = "0.10.0"
+game_root = "../game_xex"
+
+[entrypoint]
+file_path = "../game_xex/default.xex"
+out_directory_path = "generated/default"
+
+# The CRT's setjmp/longjmp (the MSVC CRT bodies): listing them makes the
+# codegen emit ppc_setjmp/ppc_longjmp instead of plain calls.
+setjmp_address = 0x828E4EB0
+longjmp_address = 0x828E4B90
+
+# Registers that live within one function become C++ locals, which the host
+# compiler keeps in machine registers. non_volatile_as_local also drops the
+# __savegprlr/__restgprlr calls around every function: they were 25% of the
+# game thread on an iPhone in a match, the thread that held the
+# frame rate (5-9k draws a frame). Exception funclets keep sharing their
+# owner's registers through ctx (the analyzer marks them). Not enabled:
+# non_argument_as_local (funclets get their frame in r12) and skip_lr.
+non_volatile_as_local = true
+cr_as_local = true
+ctr_as_local = true
+xer_as_local = true
+reserved_as_local = true
+
+#   functions.toml       functions and chunks the analyzer misses
+#   leaf_functions.toml  leaf functions only reached through pointers
+includes = ["config/functions.toml", "config/leaf_functions.toml"]
