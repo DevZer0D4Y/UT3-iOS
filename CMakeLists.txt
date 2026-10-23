@@ -66,7 +66,7 @@ endif()
 #  bundled; it goes in the app's Documents/game folder (Files app).
 # =============================================================================
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    set(UT3_IOS_BUNDLE_ID "com.ut3ios.app" CACHE STRING "iOS bundle identifier")
+    set(UT3_IOS_BUNDLE_ID "com.devz.ut3" CACHE STRING "iOS bundle identifier")
     set_target_properties(ut3 PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"

@@ -158,5 +158,6 @@ The code generator needs help in a few places, all in `config/`:
 ## Legal
 
 *Unreal Tournament 3* © Epic Games, Inc. Xbox 360 is a trademark of Microsoft. This project is
-not affiliated with or endorsed by Epic Games or Microsoft and contains no game content. The
+not affiliated with or endorsed by Epic Games or Microsoft and contains no game content; the app
+icon uses the game's cover art. The
 runtime in `sdk/` is distributed under the terms in `sdk/LICENSE`.
