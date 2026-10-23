@@ -22,25 +22,36 @@ works as long as its `default.xex` holds that same code. When an image is picked
 it before copying anything, and checks the game again at every launch; a different release of the
 game is turned away with an explanation instead of crashing.
 
-## Installing
+## How to play
 
-1. Build `UT3-iOS.ipa` (see [Building](#building)) and install it with a sideloading tool (ESign,
-   AltStore, SideStore, Sideloadly or TrollStore). The IPA is unsigned; the tool signs it.
-2. On first launch, **Choose ISO** and pick your Xbox 360 ISO/XISO. It is checked, then copied
-   into the app, which can take several minutes for a full disc image.
+1. **Download** `UT3-iOS.ipa` from the [latest release](https://github.com/DevZer0D4Y/UT3-iOS/releases/latest)
+   (or build it yourself, see [Building](#building)).
+2. **Install it** with a sideloading tool: AltStore, SideStore, Sideloadly, ESign or TrollStore.
+   The IPA is unsigned; the tool signs it. With a free Apple ID the app must be re-signed every
+   7 days; your game files and saves are kept when you do.
+3. **Make a disc image of your game.** Dump your own *Unreal Tournament 3* Xbox 360 disc to an
+   ISO/XISO and put it in the Files app (On My iPhone, iCloud Drive, or a USB drive).
+4. **Open UT3 and tap Choose ISO**, then pick the image. The app checks it first and tells you
+   if it is not a disc it can run; then it copies it into the app, which takes a few minutes for a
+   full disc. You need free space for the copy.
 
-   Or copy the extracted disc into the app's `game` folder with the Files app (On My iPhone >
-   UT3) or from a computer (Finder's Files tab). `game/` must contain `default.xex` directly; the
-   `$SystemUpdate` folder is not needed.
+   Instead of an ISO, you can copy the extracted disc into the app's `game` folder with the Files
+   app (On My iPhone > UT3) or from a computer (Finder's Files tab). `game/` must contain
+   `default.xex` directly; the `$SystemUpdate` folder is not needed.
+5. **Play.** Connect a Bluetooth controller (Xbox, PlayStation or MFi) for the best experience,
+   or use the on-screen controls. Start with *Instant Action* to jump into a match.
 
-   ```
-   UT3/
-   ├── game/        the extracted disc: default.xex, UTGame/
-   ├── game.iso     or the imported disc image
-   ├── userdata/    saves (created by the app)
-   ├── cache/       shader cache (created by the app)
-   └── ut3.toml     settings (created by the app)
-   ```
+The first matches stutter now and then while the game's effects are prepared for the GPU; they
+are kept in `cache/`, so later sessions are smoother. Your files in the app:
+
+```
+UT3/
+├── game/        the extracted disc: default.xex, UTGame/
+├── game.iso     or the imported disc image
+├── userdata/    saves (created by the app)
+├── cache/       shader cache (created by the app)
+└── ut3.toml     settings (created by the app)
+```
 
 The game language follows the device's when the disc has it, and is English otherwise. Switching
 apps or locking the device pauses the game, which resumes where it was.
