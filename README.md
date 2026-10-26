@@ -1,18 +1,21 @@
-# Unreal Tournament 3 for iPhone and iPad
+# Unreal Tournament 3 for iPhone, iPad and Mac
 
-A static recompilation of *Unreal Tournament 3* (Xbox 360, 2008) for iOS. The game's PowerPC code
-is translated ahead of time to C++ and compiled for arm64, and runs on a runtime that provides the
-Xbox 360 kernel, audio, input and graphics (Vulkan on Metal through MoltenVK).
+A static recompilation of *Unreal Tournament 3* (Xbox 360, 2008) for iOS and for Macs with Apple
+silicon. The game's PowerPC code is translated ahead of time to C++ and compiled for arm64, and
+runs on a runtime that provides the Xbox 360 kernel, audio, input and graphics (Vulkan on Metal
+through MoltenVK).
 
 **No game content is included. You need your own copy of the Xbox 360 game.**
 
 ## Requirements
 
 - An iPhone or iPad with an A15 Bionic or newer (iPhone 13, iPad mini 6th generation and later)
-  and iOS 15 or later.
+  and iOS 15 or later, **or** a Mac with Apple silicon (M1 or newer) and macOS 14 Sonoma or later.
+  Intel Macs are not supported.
 - *Unreal Tournament 3* for Xbox 360: a disc image (ISO/XISO) or the extracted disc.
 - Free space for the game: about 6 GB for an extracted disc, or the size of the image for an ISO.
-- A Bluetooth controller is recommended. Without one, an on-screen gamepad is shown.
+- A Bluetooth controller is recommended. Without one, an on-screen gamepad is shown on iPhone and
+  iPad; on a Mac, the keyboard and mouse work (and a controller can be used at the same time).
 
 ### Supported disc
 
@@ -22,7 +25,7 @@ works as long as its `default.xex` holds that same code. When an image is picked
 it before copying anything, and checks the game again at every launch; a different release of the
 game is turned away with an explanation instead of crashing.
 
-## How to play
+## How to play on iPhone and iPad
 
 1. **Download** `UT3-iOS.ipa` from the [latest release](https://github.com/DevZer0D4Y/UT3-iOS/releases/latest)
    (or build it yourself, see [Building](#building)).
@@ -56,10 +59,37 @@ UT3/
 The game language follows the device's when the disc has it, and is English otherwise. Switching
 apps or locking the device pauses the game, which resumes where it was.
 
+## How to play on a Mac
+
+1. **Download** `UT3-macOS.dmg` from the [latest release](https://github.com/DevZer0D4Y/UT3-iOS/releases/latest)
+   (or build it yourself, see [Building](#building)), open it and drag **UT3** to Applications.
+2. **Allow it to open.** The app is not notarized by Apple, so the first launch is blocked: open
+   it once, then go to System Settings > Privacy & Security and click **Open Anyway** next to the
+   message about UT3. (Or, in Terminal: `xattr -dr com.apple.quarantine /Applications/UT3.app`.)
+3. **Choose your game.** On first launch the app asks for your *Unreal Tournament 3* disc: pick an
+   ISO/XISO dumped from your own Xbox 360 disc, or the folder of the extracted disc (the one
+   holding `default.xex`). The app checks it, then plays it **where it is**: nothing is copied, so
+   keep the image or folder there (an external drive is fine as long as it is connected). If it
+   moves or is a different release, the app explains and asks again.
+4. **Play.** Use the keyboard and mouse, or connect a controller (Xbox, PlayStation or MFi).
+
+Settings, saves, logs and the shader cache are in `~/Library/Application Support/UT3`:
+
+```
+UT3/
+├── ut3.toml     settings
+├── userdata/    saves and logs
+└── cache/       shader cache
+```
+
+Instead of choosing the game in the app, you can also put `game.iso` (or an extracted `game/`
+folder) in that folder. The game starts in fullscreen; set `fullscreen = false` in `ut3.toml` for
+a window. **⌘Q** quits.
+
 ## Controls
 
-The on-screen gamepad shows while no controller is connected. It hides as soon as a controller
-connects and comes back when the controller disconnects.
+On iPhone and iPad the on-screen gamepad shows while no controller is connected. It hides as soon
+as a controller connects and comes back when the controller disconnects.
 
 | Controller | Action |
 |---|---|
@@ -73,6 +103,29 @@ connects and comes back when the controller disconnects.
 | Back | Scores |
 | D-pad down | Feign death |
 
+On a Mac, the keyboard and mouse stand in for the controller (the mouse is captured while the game
+window is active; switch apps with ⌘Tab to free it):
+
+| Keyboard and mouse | Action |
+|---|---|
+| Mouse | Look |
+| W A S D | Move |
+| Left click | Fire |
+| Right click | Alternate fire |
+| E or middle click | Next weapon |
+| R (hold) + mouse | Weapon picker |
+| Space | Jump |
+| F | Impact Hammer |
+| Q | Translocator / hoverboard |
+| M | Map (Warfare) |
+| V | Feign death |
+| Tab | Scores |
+| Esc | Pause menu |
+| Return / Backspace | Menu select / back |
+| F3 / F4 | Performance overlay / settings overlay |
+
+The keys are the `keybind_*` lines of `ut3.toml`, and `mnk_sensitivity` sets the mouse speed.
+
 ## Performance
 
 The game runs at up to 60 FPS. When the device cannot hold that (a warm phone, a heavy scene), it
@@ -82,10 +135,13 @@ play can stutter more than later sessions.
 
 ## Settings
 
-`ut3.toml` can be edited in the Files app; changes apply on the next launch.
+`ut3.toml` can be edited in the Files app (on a Mac, in `~/Library/Application Support/UT3`);
+changes apply on the next launch.
 
 | Setting | Default | |
 |---|---|---|
+| `fullscreen` | `true` | Mac: `false` runs the game in a window. |
+| `mnk_sensitivity` | `1.0` | Mac: mouse look speed. |
 | `touch_controls` | `"auto"` | On-screen gamepad: `"auto"` while no controller is connected, `"on"`, or `"off"`. |
 | `touch_controls_opacity` | `1.0` | Opacity of the on-screen gamepad, 0.1 to 1.0. |
 | `present_letterbox` | `false` | `true` keeps the 16:9 picture with side bars instead of filling the screen. |
@@ -96,12 +152,12 @@ play can stutter more than later sessions.
 
 ## Building
 
-On a Mac with Xcode, CMake 3.25+, Ninja and Python 3.
+On a Mac with Apple silicon, with Xcode, CMake 3.25+, Ninja and Python 3.
 
 ### 1. The SDK
 
 `sdk/` holds the runtime and the code generator. Build it once for the Mac (the code generator
-and a macOS test runtime) and once for iOS:
+and the macOS runtime) and, for the iPhone app, once for iOS:
 
 ```bash
 cd sdk
@@ -132,18 +188,27 @@ The output goes to `generated/` and is never committed: it is derived from the g
 
 ### 3. The app
 
+For iPhone and iPad:
+
 ```bash
 cmake --preset ios-arm64-release
 cmake --build --preset ios-arm64-release --parallel 6
 bash ios/make-ipa.sh            # writes out/UT3-iOS.ipa
 ```
 
-A macOS build runs the same code against an extracted disc, which is handy for testing:
+For the Mac:
 
 ```bash
 cmake --preset mac-arm64-release
 cmake --build --preset mac-arm64-release --parallel 6
-out/build/mac-arm64-release/ut3 --game_data_root=<extracted disc>
+bash macos/make-dmg.sh          # writes out/UT3-macOS.dmg
+```
+
+The build is `out/build/mac-arm64-release/UT3.app`, which runs as is. For testing, the game can
+also be given on the command line, which skips the picker:
+
+```bash
+out/build/mac-arm64-release/UT3.app/Contents/MacOS/UT3 --game_data_root=<extracted disc or ISO>
 ```
 
 ### Analysis fixes

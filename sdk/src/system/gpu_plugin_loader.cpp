@@ -57,11 +57,13 @@ std::vector<platform::DynamicLibrary>& LoadedPlugins() {
 std::unique_ptr<IGraphicsSystem> LoadGpuPlugin(std::string_view name, std::string_view backend) {
   const auto exe_dir = rex::filesystem::GetExecutableFolder();
   const auto file_name = PluginFileName(name);
-  // Flat layout first, then the iOS/macOS bundle layout: inside an .app the
-  // executable sits at the bundle root but loadable libraries must live in
-  // Frameworks/ to be covered by the code signature.
+  // Flat layout first, then the app bundle layouts: loadable libraries must
+  // live in Frameworks/ to be covered by the code signature. An iOS app has its
+  // executable at the bundle root, a macOS one in Contents/MacOS next to
+  // Contents/Frameworks.
   const std::filesystem::path candidates[] = {exe_dir / file_name,
-                                              exe_dir / "Frameworks" / file_name};
+                                              exe_dir / "Frameworks" / file_name,
+                                              exe_dir.parent_path() / "Frameworks" / file_name};
   std::filesystem::path path;
   for (const auto& candidate : candidates) {
     if (std::filesystem::exists(candidate)) {

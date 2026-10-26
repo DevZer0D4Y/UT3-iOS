@@ -8,11 +8,25 @@
 #==========================================================
 include_guard(GLOBAL)
 
+# An app bundle: always on iOS, and on macOS a target with MACOSX_BUNDLE set
+# (before rexglue_configure_target). Its dylibs go in Frameworks/, the only
+# place they are covered by the app's signature.
+function(_rexglue_is_app_bundle target_name out_var)
+    get_target_property(_bundle ${target_name} MACOSX_BUNDLE)
+    if(CMAKE_SYSTEM_NAME STREQUAL "iOS" OR (APPLE AND _bundle))
+        set(${out_var} TRUE PARENT_SCOPE)
+    else()
+        set(${out_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
 function(_rexglue_stage_macos_vulkan_runtime target_name)
-    if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    _rexglue_is_app_bundle(${target_name} _rexglue_app_bundle)
+    if(_rexglue_app_bundle)
         # iOS builds MoltenVK only (no loader, no ICD json -- there is nothing to
-        # enumerate drivers for). Everything the app dlopens has to sit inside the
-        # bundle so it is covered by the app's signature.
+        # enumerate drivers for), and a macOS bundle loads it the same way.
+        # Everything the app dlopens has to sit inside the bundle so it is
+        # covered by the app's signature.
         foreach(_mvk rex::moltenvk MoltenVK::MoltenVK)
             if(TARGET ${_mvk})
                 add_custom_command(TARGET ${target_name} POST_BUILD
@@ -138,14 +152,20 @@ function(rexglue_configure_target target_name)
         # (paired with the @executable_path rpath above). Everything else the
         # runtime links (fmt, spdlog, SDL3, ...) is static. Target names
         # differ between an in-tree build and an installed SDK import.
-        # An iOS app is a bundle: the rpath is @executable_path/Frameworks and
-        # anything loaded has to live there to be covered by the signature.
-        # Elsewhere on Apple the executable sits in a flat directory.
-        if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        # In an app bundle the rpath is @executable_path/Frameworks (iOS) or
+        # @executable_path/../Frameworks (macOS), and anything loaded has to
+        # live there to be covered by the signature. Otherwise the executable
+        # sits in a flat directory.
+        _rexglue_is_app_bundle(${target_name} _rexglue_app_bundle)
+        if(_rexglue_app_bundle)
             set(_rexglue_stage_dir "$<TARGET_BUNDLE_CONTENT_DIR:${target_name}>/Frameworks")
             add_custom_command(TARGET ${target_name} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${_rexglue_stage_dir}"
                 VERBATIM)
+            if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+                set_target_properties(${target_name} PROPERTIES
+                    INSTALL_RPATH "@executable_path/../Frameworks")
+            endif()
         else()
             set(_rexglue_stage_dir "$<TARGET_FILE_DIR:${target_name}>")
         endif()
@@ -176,8 +196,15 @@ function(rexglue_configure_target target_name)
         endforeach()
     endif()
 
-    # Stage requested GPU emulation plugins next to the executable. Plugins
-    # are runtime-loaded (never linked), so TARGET_RUNTIME_DLLS misses them.
+    # Stage requested GPU emulation plugins next to the executable, or in a
+    # macOS bundle's Frameworks/. Plugins are runtime-loaded (never linked), so
+    # TARGET_RUNTIME_DLLS misses them.
+    _rexglue_is_app_bundle(${target_name} _rexglue_app_bundle)
+    if(_rexglue_app_bundle AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        set(_plugin_dir "$<TARGET_BUNDLE_CONTENT_DIR:${target_name}>/Frameworks")
+    else()
+        set(_plugin_dir "$<TARGET_FILE_DIR:${target_name}>")
+    endif()
     foreach(_plugin IN LISTS ARG_GPU_PLUGINS)
         if(TARGET rexgpu-${_plugin})
             # In-tree build: depend on it so it gets built.
@@ -192,9 +219,10 @@ function(rexglue_configure_target target_name)
                 "(no target rexgpu-${_plugin} or rex::gpu-${_plugin})")
         endif()
         add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${_plugin_dir}"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:${_plugin_target}>
-                $<TARGET_FILE_DIR:${target_name}>
+                "${_plugin_dir}"
             VERBATIM
         )
         unset(_plugin_target)
