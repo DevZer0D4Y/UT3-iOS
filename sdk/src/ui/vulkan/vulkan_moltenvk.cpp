@@ -30,8 +30,16 @@ namespace {
 namespace fs = std::filesystem;
 
 constexpr std::array<std::string_view, 2> kRootSuffixes = {".", "macOS"};
+#if REX_PLATFORM_IOS
 constexpr std::array<std::string_view, 3> kRootMarkers = {
     "lib/libvulkan.1.dylib", "Frameworks/vulkan.framework/vulkan", "lib/libMoltenVK.dylib"};
+#else
+// The last one is a macOS app bundle's Contents/: like an iOS app it embeds
+// MoltenVK alone in Frameworks/ and loads it directly, with no loader or ICD.
+constexpr std::array<std::string_view, 4> kRootMarkers = {
+    "lib/libvulkan.1.dylib", "Frameworks/vulkan.framework/vulkan", "lib/libMoltenVK.dylib",
+    "Frameworks/libMoltenVK.dylib"};
+#endif
 constexpr std::array<std::string_view, 5> kLoaderFiles = {
     "lib/libvulkan.1.dylib", "lib/libvulkan.dylib", "Frameworks/vulkan.framework/vulkan",
     "lib/libMoltenVK.dylib",

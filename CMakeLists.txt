@@ -1,4 +1,5 @@
-# Unreal Tournament 3 - ReXGlue Recompiled Project, iOS build.
+# Unreal Tournament 3 - ReXGlue Recompiled Project: iOS, and macOS on Apple
+# Silicon.
 #
 # The runtime is the iOS port of the ReXGlue SDK, found through rexglue_DIR
 # (see CMakePresets.json). SDK boilerplate lives in generated/rexglue.cmake.
@@ -57,6 +58,23 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # The GPU plugin is embedded in Frameworks/ below and loaded from there; a
     # loose copy next to the executable would not be covered by the signature.
     rexglue_setup_target(ut3)
+elseif(APPLE)
+    # macOS: UT3.app. MACOSX_BUNDLE has to be set before rexglue_setup_target,
+    # which then stages the runtime dylibs, MoltenVK and the GPU plugin in
+    # Contents/Frameworks and points the rpath there.
+    enable_language(OBJCXX)
+    target_sources(ut3 PRIVATE src/mac_game_picker.mm macos/UT3.icns)
+    set_source_files_properties(src/mac_game_picker.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    set_source_files_properties(macos/UT3.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    target_link_libraries(ut3 PRIVATE "-framework AppKit")
+    set(UT3_MAC_BUNDLE_ID "com.devz.ut3" CACHE STRING "macOS bundle identifier")
+    set_target_properties(ut3 PROPERTIES
+        OUTPUT_NAME UT3
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/macos/Info.plist.in"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "${UT3_MAC_BUNDLE_ID}"
+    )
+    rexglue_setup_target(ut3 GPU_PLUGINS xenos)
 else()
     rexglue_setup_target(ut3 GPU_PLUGINS xenos)
 endif()

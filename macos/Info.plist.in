@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>UT3</string>
+	<key>CFBundleExecutable</key>
+	<string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
+	<key>CFBundleIconFile</key>
+	<string>UT3</string>
+	<key>CFBundleIdentifier</key>
+	<string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>UT3</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>${PROJECT_VERSION}</string>
+	<key>CFBundleVersion</key>
+	<string>17</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.action-games</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
+	<!-- The recompiled code is arm64 only: never offer to run it under Rosetta. -->
+	<key>LSArchitecturePriority</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>LSRequiresNativeExecution</key>
+	<true/>
+	<!-- Game Mode (macOS 14): CPU and GPU priority, lower controller latency. -->
+	<key>LSSupportsGameMode</key>
+	<true/>
+	<key>GCSupportsGameMode</key>
+	<true/>
+	<key>GCSupportsControllerUserInteraction</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Unreal Tournament 3 © Epic Games, Inc. No game content included.</string>
+</dict>
+</plist>

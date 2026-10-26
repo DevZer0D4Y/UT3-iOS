@@ -194,11 +194,16 @@ bool ReXApp::SetupEnvironment() {
     log_config.app_name = std::string(GetName());
     // The executable's directory is not always writable -- inside a signed iOS
     // app bundle it never is, and on macOS it is not when installed under
-    // /Applications. Probe it and fall back to the user data root.
+    // /Applications. Probe it and fall back to the user data root. Inside a
+    // macOS app bundle (Contents/MacOS) it may be writable, but files there
+    // would break the bundle's signature: use the user data root directly.
     std::filesystem::path log_dir = exe_dir / "logs";
     std::error_code log_dir_ec;
-    std::filesystem::create_directories(log_dir, log_dir_ec);
-    if (log_dir_ec && !user_data_root_.empty()) {
+    const bool in_app_bundle = exe_dir.filename() == "MacOS";
+    if (!in_app_bundle) {
+      std::filesystem::create_directories(log_dir, log_dir_ec);
+    }
+    if ((in_app_bundle || log_dir_ec) && !user_data_root_.empty()) {
       log_dir = user_data_root_ / "logs";
       std::filesystem::create_directories(log_dir, log_dir_ec);
     }
