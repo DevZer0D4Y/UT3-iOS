@@ -59,6 +59,11 @@ REXCVAR_DEFINE_BOOL(vulkan_allow_present_mode_mailbox, true, "UI/Vulkan",
 REXCVAR_DEFINE_BOOL(vulkan_allow_present_mode_fifo_relaxed, true, "UI/Vulkan",
                     "Allow FIFO relaxed present mode");
 
+REXCVAR_DEFINE_INT32(vulkan_swapchain_image_count, 0, "UI/Vulkan",
+                     "Swapchain images; 0 picks 3. With vsync, each one past 2 lets a "
+                     "frame wait in the queue, about one display refresh of input latency")
+    .range(0, 8);
+
 namespace rex {
 namespace ui {
 namespace vulkan {
@@ -1323,8 +1328,10 @@ VkSwapchainKHR VulkanPresenter::PaintContext::CreateSwapchainForVulkanSurface(
   swapchain_create_info.pNext = nullptr;
   swapchain_create_info.flags = 0;
   swapchain_create_info.surface = surface;
+  const int32_t requested_image_count = REXCVAR_GET(vulkan_swapchain_image_count);
   swapchain_create_info.minImageCount =
-      std::max(kSubmissionCount, surface_capabilities.minImageCount);
+      std::max(requested_image_count > 0 ? uint32_t(requested_image_count) : kSubmissionCount,
+               surface_capabilities.minImageCount);
   if (surface_capabilities.maxImageCount) {
     swapchain_create_info.minImageCount =
         std::min(swapchain_create_info.minImageCount, surface_capabilities.maxImageCount);

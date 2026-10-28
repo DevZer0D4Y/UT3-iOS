@@ -29,6 +29,11 @@ REXCVAR_DEFINE_BOOL(mnk_mouse, false, "Input",
                     "from the keybind_rstick_* keys only");
 REXCVAR_DEFINE_DOUBLE(mnk_sensitivity, 1.0, "Input", "Mouse sensitivity for right stick")
     .range(0.01, 10.0);
+REXCVAR_DEFINE_DOUBLE(mnk_stick_deadzone, 0.0, "Input",
+                      "Right stick dead zone the game applies, as a fraction of full "
+                      "deflection: any mouse motion turns the stick at least this far, so "
+                      "slow movements are not swallowed by it")
+    .range(0.0, 0.9);
 
 REXCVAR_DEFINE_STRING(keybind_a, "Semicolon,Space", "Input/Keybinds/Controller", "A button");
 REXCVAR_DEFINE_STRING(keybind_b, "Quote,Backspace", "Input/Keybinds/Controller", "B button");
@@ -332,16 +337,18 @@ X_RESULT MnkInputDriver::GetDeviceState(DeviceId id, X_INPUT_STATE* out_state) {
     ry -= INT16_MAX;
 
   if (REXCVAR_GET(mnk_mouse) && IsMouseLookActive()) {
-    double sensitivity = REXCVAR_GET(mnk_sensitivity);
-    constexpr double kBaseScale = 200.0;
-    rx += static_cast<int32_t>(double(mouse_dx_) * sensitivity * kBaseScale);
-    ry += static_cast<int32_t>(double(-mouse_dy_) * sensitivity * kBaseScale);
+    UpdateMouseLook(std::chrono::steady_clock::now());
+    rx += static_cast<int32_t>(look_x_ * INT16_MAX);
+    ry += static_cast<int32_t>(look_y_ * INT16_MAX);
+  } else {
+    // Drained while off: deltas keep accumulating in OnMouseMove, and turning
+    // the mouse on would otherwise dump the whole backlog into one sample as a
+    // camera snap.
+    mouse_dx_ = 0.0f;
+    mouse_dy_ = 0.0f;
+    look_x_ = 0.0f;
+    look_y_ = 0.0f;
   }
-  // Drained unconditionally: deltas keep accumulating in OnMouseMove while the
-  // mouse is off, and toggling it on would otherwise dump the whole backlog
-  // into one frame as a camera snap.
-  mouse_dx_ = 0.0f;
-  mouse_dy_ = 0.0f;
 
   auto clamp16 = [](int32_t v) -> int16_t {
     return static_cast<int16_t>(std::clamp(v, (int32_t)INT16_MIN, (int32_t)INT16_MAX));
@@ -474,6 +481,68 @@ void MnkInputDriver::RecenterCursorFromUIThread(int32_t x, int32_t y) {
   }
 }
 
+// The guest reads the right stick as a turn rate, at its own pace and possibly
+// several times a frame, while mouse motion arrives in bursts whenever the UI
+// thread gets to its events (once per paint when presenting with vsync).
+// Handing each poll the pixels moved since the previous one gave most polls
+// nothing and a few a jolt, and slow movements never left the game's dead
+// zone: the camera lagged and jumped. Instead the stick follows the mouse's
+// speed, measured over the time since motion was last taken, and holds between
+// bursts, so every read in between sees the same deflection.
+void MnkInputDriver::UpdateMouseLook(std::chrono::steady_clock::time_point now) {
+  using namespace std::chrono_literals;
+  // Shorter than this, a burst is too thin to measure: keep the last speed.
+  constexpr auto kMinWindow = 4ms;
+  // No motion for this long: the mouse has stopped. Covers the gap between
+  // bursts at 50 Hz and up.
+  constexpr auto kStopAfter = 25ms;
+  // Mouse speed for a full stick, in pixels (backing pixels on Retina) per
+  // second, at sensitivity 1.
+  constexpr double kFullDeflectionSpeed = 4000.0;
+
+  if (mouse_dx_ == 0.0f && mouse_dy_ == 0.0f) {
+    if (now - look_motion_time_ >= kStopAfter) {
+      look_x_ = 0.0f;
+      look_y_ = 0.0f;
+      look_sample_time_ = now;
+    }
+    return;
+  }
+  const auto elapsed = now - look_sample_time_;
+  if (elapsed < kMinWindow) {
+    return;
+  }
+  // While moving, the motion covers the whole time since the last sample,
+  // however far apart the polls (33 ms at 30 FPS). Starting from rest, the
+  // last sample may be long gone, but the burst is no older than a stop
+  // interval.
+  const bool was_moving = look_x_ != 0.0f || look_y_ != 0.0f;
+  const double seconds =
+      std::chrono::duration<double>(
+          was_moving ? elapsed : std::min<std::chrono::steady_clock::duration>(elapsed, kStopAfter))
+          .count();
+  const double scale = REXCVAR_GET(mnk_sensitivity) / (kFullDeflectionSpeed * seconds);
+  double x = double(mouse_dx_) * scale;
+  double y = double(-mouse_dy_) * scale;
+  mouse_dx_ = 0.0f;
+  mouse_dy_ = 0.0f;
+  look_sample_time_ = now;
+  look_motion_time_ = now;
+
+  // Radially, so a mostly horizontal swipe keeps its small vertical part
+  // small: from the edge of the dead zone up to full deflection.
+  const double magnitude = std::hypot(x, y);
+  if (magnitude <= 0.0) {
+    look_x_ = 0.0f;
+    look_y_ = 0.0f;
+    return;
+  }
+  const double dead_zone = REXCVAR_GET(mnk_stick_deadzone);
+  const double deflection = dead_zone + (1.0 - dead_zone) * std::min(magnitude, 1.0);
+  look_x_ = float(x / magnitude * deflection);
+  look_y_ = float(y / magnitude * deflection);
+}
+
 void MnkInputDriver::SetKeyState(uint16_t vk, bool down) {
   if (vk < 256) {
     key_down_[vk] = down;
@@ -568,6 +637,8 @@ void MnkInputDriver::OnLostFocus(rex::ui::UISetupEvent&) {
     std::memset(key_down_, 0, sizeof(key_down_));
     mouse_dx_ = 0.0f;
     mouse_dy_ = 0.0f;
+    look_x_ = 0.0f;
+    look_y_ = 0.0f;
   }
   if (attached_window_) {
     ReleaseMouseCaptureFromUIThread(attached_window_);

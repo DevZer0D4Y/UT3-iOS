@@ -285,6 +285,9 @@ class Ut3App : public rex::ReXApp {
     using rex::cvar::SetDefaultByName;
     SetDefaultByName("mnk_mode", "true");
     SetDefaultByName("mnk_mouse", "true");
+    // The mouse drives the right stick, and UT3 ignores a stick inside its dead
+    // zone: start every movement past it, or slow aiming does nothing at all.
+    SetDefaultByName("mnk_stick_deadzone", "0.24");
     SetDefaultByName("keybind_right_trigger", "LMB");    // fire
     SetDefaultByName("keybind_left_trigger", "RMB");     // alternate fire
     SetDefaultByName("keybind_right_shoulder", "E,MMB");  // next weapon
@@ -297,6 +300,10 @@ class Ut3App : public rex::ReXApp {
     SetDefaultByName("keybind_dpad_down", "V,Shift+Down");  // feign death
     SetDefaultByName("keybind_back", "Tab");             // scores
     SetDefaultByName("keybind_start", "Escape");         // pause menu
+    // Two swapchain images instead of three: with vsync a third lets a
+    // finished frame wait a refresh before it is shown, which a mouse makes
+    // plain as camera lag. The Mac's GPU keeps up with two.
+    SetDefaultByName("vulkan_swapchain_image_count", "2");
   }
 #endif
 
@@ -369,10 +376,17 @@ class Ut3App : public rex::ReXApp {
            "# false restores it.\n"
            "vulkan_msaa_as_single_sample = true\n"
            "\n"
+           "# Frames queued for the display: 2 for the lowest input latency, 3 if the\n"
+           "# frame rate drops.\n"
+           "vulkan_swapchain_image_count = 2\n"
+           "\n"
            "# Keyboard and mouse. A controller works at the same time.\n"
            "mnk_mode = true\n"
            "mnk_mouse = true\n"
            "mnk_sensitivity = 1.0\n"
+           "# Raise it if slow mouse movements do not turn the view; lower it if the\n"
+           "# view creeps on the smallest ones.\n"
+           "mnk_stick_deadzone = 0.24\n"
            "# Keys for the controller's buttons: comma-separated alternatives;\n"
            "# LMB, RMB and MMB are the mouse buttons.\n"
            "keybind_right_trigger = \"LMB\"\n"

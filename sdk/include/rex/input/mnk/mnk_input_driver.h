@@ -15,6 +15,7 @@
 #include <rex/ui/window_listener.h>
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <mutex>
 #include <queue>
@@ -59,6 +60,9 @@ class MnkInputDriver final : public InputDriver,
  private:
   bool IsEnabled() const;
   void SetKeyState(uint16_t vk, bool down);
+  // With state_mutex_ held: turns the mouse motion gathered so far into the
+  // right stick deflection (look_x_, look_y_).
+  void UpdateMouseLook(std::chrono::steady_clock::time_point now);
   void EnqueueKeystroke(uint16_t vk_pad, bool down);
 
   // Called from the guest thread. The rest of the capture path stays on the UI
@@ -81,6 +85,13 @@ class MnkInputDriver final : public InputDriver,
   // Filled on the UI thread, drained on the guest thread, hence the lock.
   float mouse_dx_ = 0.0f;
   float mouse_dy_ = 0.0f;
+
+  // Right stick from the mouse, -1 to 1, held between polls (UpdateMouseLook).
+  // Guest thread, under the lock.
+  float look_x_ = 0.0f;
+  float look_y_ = 0.0f;
+  std::chrono::steady_clock::time_point look_sample_time_{};
+  std::chrono::steady_clock::time_point look_motion_time_{};
 
   // UI thread only.
   int32_t prev_mouse_x_ = 0;
